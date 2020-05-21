@@ -14,7 +14,35 @@ Usage: python3 augmentdata.py <coco-json-name-input> <coco-json-name-output> <im
 '''
 
 
+def getBoundingBox(segmentation):
+	x_min, x_max, y_min, y_max = None, None, None, None
+	if(len(segmentation) == 0):
+		return None
+	for seg in segmentation:
+		it = iter(seg)
+		for x in it:
+			y = next(it)
+			if(x_min == None):
+				x_min = x
+			if(y_min == None):
+				y_min = y
+			if(x_max == None):
+				x_max = x
+			if(y_max == None):
+				y_max = y
 
+			if(y >= y_max):
+				y_max = y
+			elif(y <= y_min):
+				y_min = y
+			if(x >= x_max):
+				x_max = x
+			elif(x <= x_min):
+				x_min = x
+	width = x_max - x_min
+	height = y_max - y_min
+
+	return [int(x_min), int(y_min), int(width), int(height)]
 def convertBboxStyle(bbox, convert_to = "imaug"):
 	bbox2 = []
 	if convert_to == "imaug":
@@ -74,7 +102,7 @@ def AugmentData(d, input_dir, augmentations_dict, new_image_id, new_ann_id):
 
 			image_aug, psoi_aug = aug(image=image, polygons=psoi)
 			_, bbsoi_aug = aug(image=image, bounding_boxes = bbsoi)
-			bboxes_converted = bbsoi_aug.to_xyxy_array(dtype='float')
+			bboxes_converted = bbsoi_aug.items #List of bounding boxes
 
 			#is there a need to do this?
 			#not really sure. May remove this later.
@@ -102,9 +130,10 @@ def AugmentData(d, input_dir, augmentations_dict, new_image_id, new_ann_id):
 					if(current_polygon.is_valid):
 						if(current_polygon.is_fully_within_image(image_aug)):
 							polygons_list = [current_polygon]
+							print("WITHIN")
 						else:
 							try:
-								print("Polygon not completely within image.")
+								print("NOTWITHIN")
 								polygons_list = current_polygon.clip_out_of_image(image_aug) #now this is a list of polyogns that the current polygon may have split into.
 							except AssertionError:
 								print("Assertion Error occured. Ignoring. Can't guarantee that final dataset will be accurate.")
@@ -125,8 +154,10 @@ def AugmentData(d, input_dir, augmentations_dict, new_image_id, new_ann_id):
 					else:
 						print("Polygon Invalid, skiiping: ", current_polygon)
 				polygon_index = polygon_index + j + 1
-				bbox = bboxes_converted[i]
-				bbox = convertBboxStyle(bbox, "s")
+				bboxes_converted[i].clip_out_of_image_(image_aug)
+				#bbox = [bboxes_converted[i].x1_int, bboxes_converted[i].y1_int, int(bboxes_converted[i].width), int(bboxes_converted[i].height)]
+				#bbox = convertBboxStyle(bbox, "s")
+				bbox = getBoundingBox(SEGMENTATION)
 				if(len(SEGMENTATION) > 0):
 					A = {
 						"id":new_ann_id,
