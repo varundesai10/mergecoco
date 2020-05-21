@@ -8,7 +8,7 @@ Eg. $python3 coco1.json coco2.json coco3.json outputfile.json
 #global_table
 categoryIdTable = dict()	#category ids are taken from the first file.
 currentCatId = 1
-
+#hello
 class cocoFile():
 	def __init__(self, path):
 		self.imageIdTable = dict()
